@@ -9,4 +9,5 @@ import (
 type User interface {
 	SaveUser(ctx context.Context, user entity.User) (string, error)
 	User(ctx context.Context, username string) (*entity.User, error)
+	GrantAdminPermission(ctx context.Context, userID string) error
 }

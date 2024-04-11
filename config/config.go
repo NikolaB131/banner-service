@@ -27,8 +27,10 @@ type (
 	}
 
 	Auth struct {
-		TokenTTL   time.Duration `yaml:"token_ttl"`
-		SignSecret string        `yaml:"sign_secret"`
+		TokenTTL      time.Duration `yaml:"token_ttl"`
+		SignSecret    string        `yaml:"sign_secret"`
+		AdminUsername string        `yaml:"admin_username"`
+		AdminPassword string        `yaml:"admin_password"`
 	}
 
 	DB struct {
@@ -55,7 +57,9 @@ func NewConfig() (*Config, error) {
 			Level: "debug",
 		},
 		Auth: Auth{
-			TokenTTL: 30 * time.Minute,
+			TokenTTL:      30 * time.Minute,
+			AdminUsername: "admin",
+			AdminPassword: "admin",
 		},
 	}
 
@@ -86,6 +90,16 @@ func NewConfig() (*Config, error) {
 			return nil, fmt.Errorf("environment variable AUTH_TOKEN_TTL parsing error: %w", err)
 		}
 		config.Auth.TokenTTL = tokenTTLParsed
+	}
+
+	authAdminUsername, ok := os.LookupEnv("AUTH_ADMIN_USERNAME")
+	if ok {
+		config.Auth.AdminUsername = authAdminUsername
+	}
+
+	authAdminPassword, ok := os.LookupEnv("AUTH_ADMIN_PASSWORD")
+	if ok {
+		config.Auth.AdminUsername = authAdminPassword
 	}
 
 	authSignSecret, ok := os.LookupEnv("AUTH_SIGN_SECRET")

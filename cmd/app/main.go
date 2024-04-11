@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/NikolaB131-org/banner-service/config"
@@ -34,6 +35,19 @@ func main() {
 
 	// Services
 	authService := auth.New(userRepository, config.Auth.SignSecret, config.Auth.TokenTTL)
+
+	// Creating admin user
+	adminUser, _ := userRepository.User(context.Background(), config.Auth.AdminUsername)
+	if adminUser == nil {
+		adminID, err := authService.RegisterUser(context.Background(), config.Auth.AdminUsername, config.Auth.AdminPassword)
+		if err != nil && err != auth.ErrUserAlreadyExists {
+			panic(fmt.Sprintf("unable to create admin user: %s", err.Error()))
+		}
+		err = authService.MakeAdmin(context.Background(), adminID)
+		if err != nil {
+			panic(fmt.Sprintf("unable to grant permissions to admin user: %s", err.Error()))
+		}
+	}
 
 	// Routes
 	r := gin.New()

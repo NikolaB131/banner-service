@@ -53,3 +53,8 @@ func (r *UserRepository) User(ctx context.Context, username string) (*entity.Use
 
 	return &user, nil
 }
+
+func (r *UserRepository) GrantAdminPermission(ctx context.Context, userID string) error {
+	_, err := r.Pool.Exec(ctx, "UPDATE users SET role = 'admin' WHERE id = $1", userID)
+	return err
+}

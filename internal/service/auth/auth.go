@@ -18,7 +18,7 @@ type (
 	AuthService interface {
 		Login(ctx context.Context, username string, password string) (string, error)
 		RegisterUser(ctx context.Context, username string, password string) (string, error)
-		MakeAdmin() // делать не через JWT
+		MakeAdmin(ctx context.Context, userID string) error
 	}
 
 	Auth struct {
@@ -51,7 +51,7 @@ func (a *Auth) Login(ctx context.Context, username string, password string) (str
 		return "", ErrInvalidCredentials
 	}
 
-	signedToken, err := jwt.Generate(a.signSecret, user.ID, user.Username)
+	signedToken, err := jwt.Generate(a.signSecret, a.tokenTTL, user.ID, user.Username)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
@@ -83,6 +83,6 @@ func (a *Auth) RegisterUser(ctx context.Context, username string, password strin
 	return userId, nil
 }
 
-func (a *Auth) MakeAdmin() {
-
+func (a *Auth) MakeAdmin(ctx context.Context, userID string) error {
+	return a.userRepository.GrantAdminPermission(ctx, userID)
 }
