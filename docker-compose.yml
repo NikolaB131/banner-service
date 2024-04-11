@@ -1,0 +1,28 @@
+version: '3.8'
+name: banner-service
+services:
+  server:
+    build: .
+    environment:
+      - HTTP_PORT=3000
+      - DB_URL=postgresql://postgres:postgres@db:5432/banner?sslmode=disable
+    ports:
+      - "4000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    build:
+      dockerfile: db.Dockerfile
+    environment:
+      POSTGRES_DB: "banner"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "4001:5432"
+    healthcheck:
+      test: pg_isready
+      interval: 3s
+      timeout: 15s
+      retries: 5
