@@ -1,15 +1,16 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
-	"github.com/NikolaB131-org/banner-service/internal/service/auth"
+	"github.com/NikolaB131-org/banner-service/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthRoutes struct {
-	authService auth.AuthService
+	authService service.AuthService
 }
 
 type AuthBody struct {
@@ -17,7 +18,7 @@ type AuthBody struct {
 	Password string `json:"password"`
 }
 
-func newAuthRoutes(g *gin.RouterGroup, authService auth.AuthService) {
+func newAuthRoutes(g *gin.RouterGroup, authService service.AuthService) {
 	authR := AuthRoutes{authService: authService}
 
 	auth := g.Group("/auth")
@@ -30,8 +31,8 @@ func newAuthRoutes(g *gin.RouterGroup, authService auth.AuthService) {
 func (r *AuthRoutes) login(c *gin.Context) {
 	var body AuthBody
 
-	if err := c.BindJSON(&body); err != nil {
-		c.Status(http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "body parsing error"})
 		return
 	}
 	if body.Username == "" {
@@ -72,8 +73,8 @@ func (r *AuthRoutes) register(c *gin.Context) {
 	id, err := r.authService.RegisterUser(c, body.Username, body.Password)
 	if err != nil {
 		slog.Error(err.Error())
-		switch err {
-		case auth.ErrUserAlreadyExists:
+		switch {
+		case errors.Is(err, service.ErrUserAlreadyExists):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:
 			c.Status(http.StatusInternalServerError)

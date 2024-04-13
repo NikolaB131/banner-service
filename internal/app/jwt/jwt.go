@@ -28,7 +28,7 @@ func Generate(signSecret string, tokenTTL time.Duration, id string, username str
 }
 
 func Parse(token string, signSecret string) (*JWTClaims, error) {
-	parsedToken, err := jwt.ParseWithClaims(token, &JWTClaims{}, func(t *jwt.Token) (interface{}, error) {
+	parsedToken, err := jwt.ParseWithClaims(token, &JWTClaims{}, func(t *jwt.Token) (any, error) {
 		return []byte(signSecret), nil
 	})
 	if err != nil {

@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/NikolaB131-org/banner-service/config"
 	"github.com/NikolaB131-org/banner-service/internal/app"
 	v1 "github.com/NikolaB131-org/banner-service/internal/controller/http/v1"
+	"github.com/NikolaB131-org/banner-service/internal/controller/http/v1/middlewares"
 	postgresRepo "github.com/NikolaB131-org/banner-service/internal/repository/postgres"
-	"github.com/NikolaB131-org/banner-service/internal/service/auth"
+	"github.com/NikolaB131-org/banner-service/internal/service"
 	"github.com/NikolaB131-org/banner-service/pkg/postgres"
 	"github.com/gin-gonic/gin"
 )
@@ -32,15 +34,17 @@ func main() {
 
 	// Repositories init
 	userRepository := postgresRepo.NewUserRepository(pg)
+	bannerRepository := postgresRepo.NewBannerRepository(pg)
+	tagRepository := postgresRepo.NewTagRepository(pg)
+	featureRepository := postgresRepo.NewFeatureRepository(pg)
 
 	// Services
-	authService := auth.New(userRepository, config.Auth.SignSecret, config.Auth.TokenTTL)
+	authService := service.NewAuthService(userRepository, config.Auth.SignSecret, config.Auth.TokenTTL)
+	bannerService := service.NewBannerService(bannerRepository, tagRepository, featureRepository)
 
-	// Creating admin user
-	adminUser, _ := userRepository.User(context.Background(), config.Auth.AdminUsername)
-	if adminUser == nil {
-		adminID, err := authService.RegisterUser(context.Background(), config.Auth.AdminUsername, config.Auth.AdminPassword)
-		if err != nil && err != auth.ErrUserAlreadyExists {
+	adminID, err := authService.RegisterUser(context.Background(), config.Auth.AdminUsername, config.Auth.AdminPassword)
+	if !errors.Is(err, service.ErrUserAlreadyExists) {
+		if err != nil {
 			panic(fmt.Sprintf("unable to create admin user: %s", err.Error()))
 		}
 		err = authService.MakeAdmin(context.Background(), adminID)
@@ -49,9 +53,12 @@ func main() {
 		}
 	}
 
+	// Middlewares
+	middlewares := middlewares.New(config, userRepository)
+
 	// Routes
 	r := gin.New()
-	v1.NewRouter(r, config, authService)
+	v1.NewRouter(r, middlewares, authService, bannerService)
 
 	r.Run(fmt.Sprintf(":%d", config.HTTP.Port))
 }

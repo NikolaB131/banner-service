@@ -1,4 +1,4 @@
-package auth
+package service
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"github.com/NikolaB131-org/banner-service/internal/app/jwt"
 	"github.com/NikolaB131-org/banner-service/internal/entity"
 	"github.com/NikolaB131-org/banner-service/internal/repository"
-	"github.com/NikolaB131-org/banner-service/internal/repository/postgres"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,7 +32,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
-func New(userRepository repository.User, signSecret string, tokenTTL time.Duration) *Auth {
+func NewAuthService(userRepository repository.User, signSecret string, tokenTTL time.Duration) *Auth {
 	return &Auth{
 		userRepository: userRepository,
 		signSecret:     signSecret,
@@ -60,12 +59,11 @@ func (a *Auth) Login(ctx context.Context, username string, password string) (str
 }
 
 func (a *Auth) RegisterUser(ctx context.Context, username string, password string) (string, error) {
-	user, err := a.userRepository.User(ctx, username)
-	if err != nil && !errors.Is(err, postgres.ErrUserNotFound) {
-		return "", fmt.Errorf("failed to check if user exists: %w", err)
-	}
-	if user != nil {
+	_, err := a.userRepository.User(ctx, username)
+	if err == nil {
 		return "", ErrUserAlreadyExists
+	} else if !errors.Is(err, repository.ErrNotFound) {
+		return "", fmt.Errorf("failed to check if user exists: %w", err)
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

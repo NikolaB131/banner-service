@@ -17,7 +17,7 @@ services:
       dockerfile: db.Dockerfile
     environment:
       POSTGRES_DB: "banner"
-      POSTGRES_USER: "postgres"
+      PGUSER: "postgres"
       POSTGRES_PASSWORD: "postgres"
     ports:
       - "4001:5432"
