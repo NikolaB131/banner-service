@@ -1,10 +1,12 @@
 package v1
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/NikolaB131-org/banner-service/internal/controller/http/v1/middlewares"
+	"github.com/NikolaB131-org/banner-service/internal/entity"
 	"github.com/NikolaB131-org/banner-service/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -46,17 +48,23 @@ func (r *UserBannerRoutes) get(c *gin.Context) {
 		return
 	}
 
-	banners, err := r.bannerService.Get(c, query.FeatureID, query.TagID, nil, nil)
+	var banner entity.Banner
+	var err error
+	if query.UseLastRevision != nil {
+		banner, err = r.bannerService.GetBanner(c, *query.FeatureID, *query.TagID, *query.UseLastRevision)
+	} else {
+		banner, err = r.bannerService.GetBanner(c, *query.FeatureID, *query.TagID, false)
+	}
 	if err != nil {
 		slog.Error(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get banner"})
+		switch {
+		case errors.Is(err, service.ErrBannerNotFound):
+			c.Status(http.StatusNotFound)
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get banner"})
+		}
 		return
 	}
-	if len(banners) == 0 {
-		c.Status(http.StatusNotFound)
-		return
-	}
-	banner := banners[0]
 
 	userRole, _ := c.Get("user_role")
 	if userRole == "user" && !banner.IsActive {

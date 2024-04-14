@@ -13,13 +13,15 @@ type Postgres struct {
 
 func New(url string) (*Postgres, error) {
 	ctx := context.Background()
+
 	dbpool, err := pgxpool.New(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Unable to create postgres pool: %s", err.Error()))
+		return nil, fmt.Errorf("failed to create postgres pool: %w", err)
 	}
+
 	err = dbpool.Ping(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Ping to postgres pool failed: %s", err.Error()))
+		return nil, fmt.Errorf("failed ping postgres pool: %w", err)
 	}
 
 	return &Postgres{Pool: dbpool}, nil

@@ -12,26 +12,33 @@ var (
 	ErrAlreadyExists = errors.New("already exists")
 )
 
-type User interface {
-	SaveUser(ctx context.Context, user entity.User) (string, error)
-	User(ctx context.Context, username string) (entity.User, error)
-	GrantAdminPermission(ctx context.Context, userID string) error
-}
+type (
+	User interface {
+		SaveUser(ctx context.Context, user entity.User) (string, error)
+		User(ctx context.Context, username string) (entity.User, error)
+		GrantAdminPermission(ctx context.Context, userID string) error
+	}
 
-type Banner interface {
-	IsExistsById(ctx context.Context, id int) (bool, error)
-	IsExists(ctx context.Context, featureID int, tagID int) (bool, error)
-	Banners(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error)
-	BannerById(ctx context.Context, id int) (entity.Banner, error)
-	SaveBanner(ctx context.Context, tagIDs []int, featureID int, content map[string]any, isActive bool) (int, error)
-	UpdateBanner(ctx context.Context, bannerID int, tagIDs []int, featureID *int, content map[string]any, isActive *bool) error
-	DeleteBannerByID(ctx context.Context, id int) error
-}
+	Banner interface {
+		IsExistsById(ctx context.Context, id int) (bool, error)
+		IsExists(ctx context.Context, featureID int, tagID int) (bool, error)
+		Banners(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error)
+		BannerById(ctx context.Context, id int) (entity.Banner, error)
+		SaveBanner(ctx context.Context, tagIDs []int, featureID int, content map[string]any, isActive bool) (int, error)
+		UpdateBanner(ctx context.Context, bannerID int, tagIDs []int, featureID *int, content map[string]any, isActive *bool) error
+		DeleteBannerByID(ctx context.Context, id int) error
+	}
 
-type Feature interface {
-	IsExist(ctx context.Context, id int) (bool, error)
-}
+	BannerCache interface {
+		Banner(ctx context.Context, featureID int, tagID int) (entity.Banner, error)
+		SaveBanner(ctx context.Context, banner entity.Banner) error
+	}
 
-type Tag interface {
-	IsExist(ctx context.Context, id int) (bool, error)
-}
+	Feature interface {
+		IsExist(ctx context.Context, id int) (bool, error)
+	}
+
+	Tag interface {
+		IsExist(ctx context.Context, id int) (bool, error)
+	}
+)

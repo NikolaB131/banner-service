@@ -58,7 +58,7 @@ func (r *BannerRoutes) get(c *gin.Context) {
 		return
 	}
 
-	banners, err := r.bannerService.Get(c, query.FeatureID, query.TagID, query.Limit, query.Offset)
+	banners, err := r.bannerService.GetBanners(c, query.FeatureID, query.TagID, query.Limit, query.Offset)
 	if err != nil {
 		slog.Error(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed get banners"})

@@ -1,9 +1,9 @@
-http:
-  port: 4000
-
 logger:
   level: debug # possible values: debug, error, warn, info
 
 auth:
   token_ttl: 60m
   sign_secret: abracadabra
+
+redis:
+  banner_ttl: 5m

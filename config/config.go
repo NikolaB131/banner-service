@@ -16,6 +16,7 @@ type (
 		Logger `yaml:"logger"`
 		Auth   `yaml:"auth"`
 		DB     `yaml:"database"`
+		Redis  `yaml:"redis"`
 	}
 
 	HTTP struct {
@@ -35,6 +36,11 @@ type (
 
 	DB struct {
 		Url string `yaml:"url"`
+	}
+
+	Redis struct {
+		Url       string        `yaml:"url"`
+		BannerTTL time.Duration `yaml:"banner_ttl"`
 	}
 )
 
@@ -60,6 +66,9 @@ func NewConfig() (*Config, error) {
 			TokenTTL:      30 * time.Minute,
 			AdminUsername: "admin",
 			AdminPassword: "admin",
+		},
+		Redis: Redis{
+			BannerTTL: 10 * time.Minute,
 		},
 	}
 
@@ -110,6 +119,20 @@ func NewConfig() (*Config, error) {
 	dbUrl, ok := os.LookupEnv("DB_URL")
 	if ok {
 		config.DB.Url = dbUrl
+	}
+
+	redisUrl, ok := os.LookupEnv("REDIS_URL")
+	if ok {
+		config.Redis.Url = redisUrl
+	}
+
+	redisBannerTTL, ok := os.LookupEnv("REDIS_BANNER_TTL")
+	if ok {
+		redisBannerTTLParsed, err := time.ParseDuration(redisBannerTTL)
+		if err != nil {
+			return nil, fmt.Errorf("environment variable REDIS_BANNER_TTL parsing error: %w", err)
+		}
+		config.Redis.BannerTTL = redisBannerTTLParsed
 	}
 
 	return &config, nil

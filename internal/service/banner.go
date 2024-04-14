@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/NikolaB131-org/banner-service/internal/entity"
 	"github.com/NikolaB131-org/banner-service/internal/repository"
@@ -11,16 +12,18 @@ import (
 
 type (
 	BannerService interface {
-		Get(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error)
+		GetBanner(ctx context.Context, featureID int, tagID int, useLastRevision bool) (entity.Banner, error)
+		GetBanners(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error)
 		Create(ctx context.Context, tagIDs []int, featureID int, content map[string]any, isActive bool) (int, error)
 		Update(ctx context.Context, id int, tagIDs []int, featureID *int, content map[string]any, isActive *bool) error
 		DeleteByID(ctx context.Context, id int) error
 	}
 
 	Banner struct {
-		bannerRepository  repository.Banner
-		tagRepository     repository.Tag
-		featureRepository repository.Feature
+		bannerRepository      repository.Banner
+		bannerCacheRepository repository.BannerCache
+		tagRepository         repository.Tag
+		featureRepository     repository.Feature
 	}
 )
 
@@ -31,15 +34,62 @@ var (
 	ErrBannerFeatureNotExists = errors.New("banner feature not exists")
 )
 
-func NewBannerService(bannerRepository repository.Banner, tagRepository repository.Tag, featureRepository repository.Feature) *Banner {
+func NewBannerService(
+	bannerRepository repository.Banner,
+	bannerCacheRepository repository.BannerCache,
+	tagRepository repository.Tag,
+	featureRepository repository.Feature,
+) *Banner {
 	return &Banner{
-		bannerRepository:  bannerRepository,
-		tagRepository:     tagRepository,
-		featureRepository: featureRepository,
+		bannerRepository:      bannerRepository,
+		bannerCacheRepository: bannerCacheRepository,
+		tagRepository:         tagRepository,
+		featureRepository:     featureRepository,
 	}
 }
 
-func (b *Banner) Get(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error) {
+func (b *Banner) GetBanner(ctx context.Context, featureID int, tagID int, useLastRevision bool) (entity.Banner, error) {
+	getBannerFromDB := func() (entity.Banner, error) {
+		banners, err := b.bannerRepository.Banners(ctx, &featureID, &tagID, nil, nil)
+		if err != nil {
+			return entity.Banner{}, fmt.Errorf("failed to get banners: %w", err)
+		}
+		if len(banners) == 0 {
+			return entity.Banner{}, ErrBannerNotFound
+		}
+		return banners[0], nil
+	}
+
+	if useLastRevision {
+		return getBannerFromDB()
+	}
+
+	cachedBanner, err := b.bannerCacheRepository.Banner(ctx, featureID, tagID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrNotFound):
+			banner, err := getBannerFromDB()
+			if err != nil {
+				return entity.Banner{}, err
+			}
+
+			go func() { // runs asynchronously to not block response
+				err = b.bannerCacheRepository.SaveBanner(ctx, banner)
+				if err != nil {
+					slog.Warn(fmt.Sprintf("failed to cache banner: %s", err.Error()))
+				}
+			}()
+
+			return banner, nil
+		default:
+			return entity.Banner{}, fmt.Errorf("failed to get cached banner: %w", err)
+		}
+	}
+
+	return cachedBanner, nil
+}
+
+func (b *Banner) GetBanners(ctx context.Context, featureID *int, tagID *int, limit *int, offset *int) ([]entity.Banner, error) {
 	banners, err := b.bannerRepository.Banners(ctx, featureID, tagID, limit, offset)
 	if err != nil {
 		return []entity.Banner{}, fmt.Errorf("failed to get banners: %w", err)
