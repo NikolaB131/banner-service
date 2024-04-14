@@ -44,12 +44,18 @@ type (
 	}
 )
 
-func NewConfig() (*Config, error) {
-	executablePath, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("config geting executable filepath error: %w", err)
+func NewConfig(path *string) (*Config, error) {
+	yamlFilePath := ""
+	if path == nil {
+		executablePath, err := os.Executable()
+		if err != nil {
+			return nil, fmt.Errorf("config geting executable filepath error: %w", err)
+		}
+		yamlFilePath = filepath.Join(executablePath, "../../config.yml")
+	} else {
+		yamlFilePath = *path
 	}
-	yamlFile, err := os.ReadFile(filepath.Join(executablePath, "../../config.yml"))
+	yamlFile, err := os.ReadFile(yamlFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("config reading yaml file error: %w", err)
 	}
